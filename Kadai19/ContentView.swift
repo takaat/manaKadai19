@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Item: Identifiable, Codable{
+struct Item: Identifiable, Codable {
     var id = UUID()
     var name: String
     var isChecked: Bool
@@ -18,21 +18,13 @@ struct ContentView: View {
         case add, edit
     }
 
-    @AppStorage("itemData") private var itemStorage: Data = Data()
+    let key = "storageItems"
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isShowAddEditView = false
     @State private var name = ""
     @State private var mode: Mode = .add
     @State private var editId = UUID()
-    @State private var items: [Item] = [.init(name: "apple2", isChecked: true),
-                                        .init(name: "orange", isChecked: true)]
-    var displayItems: [Item] {
-        get {
-          return try? JSONDecoder().decode(DataProtocol, from: itemStorage)
-        }
-        set {
-
-        }
-    }
+    @State private var items: [Item] = []
 
     var body: some View {
         NavigationView {
@@ -83,6 +75,25 @@ struct ContentView: View {
                 },
                 didCancel: { isShowAddEditView = false })
         }
+        .onChange(of: scenePhase) { newScenePhase in
+            switch newScenePhase {
+            case .active: items = load()
+            case .inactive: save()
+            default: break
+            }
+        }
+    }
+
+    private func save() {
+        let encodeItems = try? JSONEncoder().encode(items)
+        UserDefaults.standard.set(encodeItems, forKey: key)
+    }
+
+    private func load() -> [Item] {
+        let decodeItems = UserDefaults.standard.data(forKey: key) ?? Data()
+        let items = try? JSONDecoder().decode([Item].self, from: decodeItems)
+        guard let items = items else { return [] }
+        return items
     }
 }
 
