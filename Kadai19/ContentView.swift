@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct Item: Identifiable {
-    let id = UUID()
+struct Item: Identifiable, Codable{
+    var id = UUID()
     var name: String
     var isChecked: Bool
 }
@@ -18,12 +18,21 @@ struct ContentView: View {
         case add, edit
     }
 
+    @AppStorage("itemData") private var itemStorage: Data = Data()
     @State private var isShowAddEditView = false
     @State private var name = ""
     @State private var mode: Mode = .add
     @State private var editId = UUID()
     @State private var items: [Item] = [.init(name: "apple2", isChecked: true),
                                         .init(name: "orange", isChecked: true)]
+    var displayItems: [Item] {
+        get {
+          return try? JSONDecoder().decode(DataProtocol, from: itemStorage)
+        }
+        set {
+
+        }
+    }
 
     var body: some View {
         NavigationView {
