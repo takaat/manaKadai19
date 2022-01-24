@@ -18,7 +18,6 @@ struct ContentView: View {
         case add, edit
     }
 
-    let key = "storageItems"
     @Environment(\.scenePhase) private var scenePhase
     @State private var isShowAddEditView = false
     @State private var name = ""
@@ -76,24 +75,55 @@ struct ContentView: View {
                 didCancel: { isShowAddEditView = false })
         }
         .onChange(of: scenePhase) { newScenePhase in
+            let dataStore = ItemDataStore()
+
             switch newScenePhase {
-            case .active: items = load()
-            case .inactive: save()
-            default: break
+            case .active:
+                do {
+                    items = try dataStore.load() ?? []
+                } catch {
+                    print("読み込みエラー")
+                }
+            case .inactive:
+                do {
+                    try dataStore.save(items: items)
+                } catch {
+                    print("書き込みエラー")
+                }
+            default:
+                break
             }
         }
     }
+}
 
-    private func save() {
-        let encodeItems = try? JSONEncoder().encode(items)
-        UserDefaults.standard.set(encodeItems, forKey: key)
+struct ItemDataStore {
+    enum Error: Swift.Error {
+        case encodingError
+        case decodingError
     }
 
-    private func load() -> [Item] {
-        let decodeItems = UserDefaults.standard.data(forKey: key) ?? Data()
-        let items = try? JSONDecoder().decode([Item].self, from: decodeItems)
-        guard let items = items else { return [] }
-        return items
+    private let key = "storageItems"
+
+    func save(items: [Item]) throws {
+        do {
+            let encodeItems = try JSONEncoder().encode(items)
+            UserDefaults.standard.set(encodeItems, forKey: key)
+        } catch {
+            throw Error.encodingError
+        }
+    }
+
+    func load() throws -> [Item]? {
+        guard let decodeItems = UserDefaults.standard.data(forKey: key) else {
+            return nil
+        }
+
+        do {
+            return try JSONDecoder().decode([Item].self, from: decodeItems)
+        } catch {
+            throw Error.decodingError
+        }
     }
 }
 
